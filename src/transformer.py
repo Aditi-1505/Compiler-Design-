@@ -6,44 +6,30 @@ from parser import (
 )
 from semantic import SemanticAnalyzer
 
-
 class Transformer:
     def transform(self, node):
         if isinstance(node, Program):
             return Program([s for s in (self.transform(st) for st in node.statements) if s])
-
         elif isinstance(node, Assignment):
             return Assignment(node.name, self.transform(node.value))
-
         elif isinstance(node, Print):
             return Print(self.transform(node.expression))
-
         elif isinstance(node, BinaryOp):
             return self.transform_binary(node)
-
         elif isinstance(node, FunctionCall):
             return FunctionCall(node.name, [self.transform(a) for a in node.args])
-
         elif isinstance(node, If):
             return self.transform_if(node)
-
         elif isinstance(node, While):
             return self.transform_while(node)
-
         elif isinstance(node, (Number, String, Identifier)):
             return node
-
         return node
-
     def transform_binary(self, node):
         left  = self.transform(node.left)
         right = self.transform(node.right)
-
-        # constant folding
         if isinstance(left, Number) and isinstance(right, Number):
             return self.fold_constants(left, node.op, right)
-
-        # identity rules  (only safe for numeric zero/one)
         if node.op.name == "PLUS":
             if isinstance(right, Number) and right.value in ("0", "0.0"):
                 return left
@@ -58,9 +44,7 @@ class Transformer:
                 return Number("0")
             if isinstance(left, Number) and left.value in ("0", "0.0"):
                 return Number("0")
-
         return BinaryOp(left, node.op, right)
-
     def fold_constants(self, left, op, right):
         l = float(left.value)
         r = float(right.value)
@@ -79,7 +63,6 @@ class Transformer:
             val = int(result) if result == int(result) else result
             return Number(str(val))
         return BinaryOp(left, op, right)
-
     def transform_if(self, node):
         condition = self.transform(node.condition)
         body = [s for s in (self.transform(st) for st in node.body) if s]
@@ -89,14 +72,12 @@ class Transformer:
         ]
         else_body = [s for s in (self.transform(st) for st in node.else_body) if s]
         return If(condition, body, elif_clauses, else_body)
-
     def transform_while(self, node):
         condition = self.transform(node.condition)
         if isinstance(condition, Number) and float(condition.value) == 0:
             return None
         body = [s for s in (self.transform(st) for st in node.body) if s]
         return While(condition, body)
-
 
 if __name__ == "__main__":
     print("Enter Python code (press Enter twice to finish):\n")
