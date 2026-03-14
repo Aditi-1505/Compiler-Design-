@@ -2,37 +2,40 @@ from parser import (
     Program, Number, String, Identifier, BinaryOp,
     Assignment, Print, If, While, FunctionCall,
 )
+
 _BUILTIN_MAP = {
-    "length":None,
-    "print":None,
-    "int":"Math.trunc",
-    "float":"parseFloat",
-    "word":"String",
-    "abs":"Math.abs",
-    "largest":"Math.max",
-    "least":"Math.min",
-    "round":"Math.round",
-    "pow":"Math.pow",
-    "sqrt":"Math.sqrt",
-    "input":"prompt",
-    "type":"typeof",
+    "length": None,
+    "print": None,
+    "int": "Math.trunc",
+    "float": "parseFloat",
+    "word": "String",
+    "abs": "Math.abs",
+    "largest": "Math.max",
+    "least": "Math.min",
+    "round": "Math.round",
+    "pow": "Math.pow",
+    "sqrt": "Math.sqrt",
+    "input": "prompt",
+    "type": "typeof",
 }
+
 _OP_MAP = {
-    "PLUS":"+",
-    "MINUS":"-",
-    "MULTIPLY":"*",
-    "DIVIDE":"/",
-    "MODULO":"%",
-    "FLOOR_DIVIDE":None,
-    "DOUBLE_EQUALS":"===",
-    "NOT_EQUALS":"!==",
-    "LESS_THAN":"<",
-    "GREATER_THAN":">",
-    "LESS_EQUAL":"<=",
-    "GREATER_EQUAL":">=",
-    "AND":"&&",
-    "OR":"||",
+    "PLUS": "+",
+    "MINUS": "-",
+    "MULTIPLY": "*",
+    "DIVIDE": "/",
+    "MODULO": "%",
+    "FLOOR_DIVIDE": None,
+    "DOUBLE_EQUALS": "===",
+    "NOT_EQUALS": "!==",
+    "LESS_THAN": "<",
+    "GREATER_THAN": ">",
+    "LESS_EQUAL": "<=",
+    "GREATER_EQUAL": ">=",
+    "AND": "&&",
+    "OR": "||",
 }
+
 class CodeGenError(Exception):
     pass
 def _collect_assigned(sta):
@@ -49,6 +52,7 @@ def _collect_assigned(sta):
         if isinstance(node, While):
             names |= _collect_assigned(node.body)
     return names
+
 class CodeGenerator:
     def __init__(self, indent_size=2):
         self._indent_size = indent_size
@@ -59,7 +63,7 @@ class CodeGenerator:
             raise CodeGenError(f"Expected Program, got {type(node).__name__}")
         lines = []
         for stmt in node.statements:
-            lines.extend(self._gen_stmt(stmt))
+            lines.extend(self.gen_stmt(stmt))
         return "\n".join(lines)
     @property
     def pad(self):
@@ -70,62 +74,62 @@ class CodeGenerator:
         self._level -= 1
     def gen_stmt(self, node):
         if isinstance(node, Assignment):
-            return self._gen_assignment(node)
+            return self.gen_assignment(node)
         if isinstance(node, Print):
-            return [f"{self._pad}console.log({self._gen_expr(node.expression)});"]
+            return [f"{self.pad}console.log({self.gen_expr(node.expression)});"]
         if isinstance(node, If):
-            return self._gen_if(node)
+            return self.gen_if(node)
         if isinstance(node, While):
-            return self._gen_while(node)
+            return self.gen_while(node)
         if isinstance(node, FunctionCall):
-            return [f"{self._pad}{self._gen_expr(node)};"]
+            return [f"{self.pad}{self.gen_expr(node)};"]
         if isinstance(node, BinaryOp):
-            return [f"{self._pad}{self._gen_expr(node)};"]
+            return [f"{self.pad}{self.gen_expr(node)};"]
         raise CodeGenError(f"Unknown statement node: {type(node).__name__}")
     def gen_assignment(self, node):
-        value = self._gen_expr(node.value)
+        value = self.gen_expr(node.value)
         if node.name not in self._declared:
             self._declared.add(node.name)
-            return [f"{self._pad}let {node.name} = {value};"]
-        return [f"{self._pad}{node.name} = {value};"]
+            return [f"{self.pad}let {node.name} = {value};"]
+        return [f"{self.pad}{node.name} = {value};"]
     def gen_if(self, node):
         lines = []
-        cond = self._gen_expr(node.condition)
-        lines.append(f"{self._pad}if ({cond}) {{")
-        lines.extend(self._gen_block(node.body))
+        cond = self.gen_expr(node.condition)
+        lines.append(f"{self.pad}if ({cond}) {{")
+        lines.extend(self.gen_block(node.body))
         for elif_cond, elif_body in node.elif_clauses:
-            ec = self._gen_expr(elif_cond)
-            lines.append(f"{self._pad}}} else if ({ec}) {{")
-            lines.extend(self._gen_block(elif_body))
+            ec = self.gen_expr(elif_cond)
+            lines.append(f"{self.pad}}} else if ({ec}) {{")
+            lines.extend(self.gen_block(elif_body))
         if node.else_body:
-            lines.append(f"{self._pad}}} else {{")
-            lines.extend(self._gen_block(node.else_body))
-        lines.append(f"{self._pad}}}")
+            lines.append(f"{self.pad}}} else {{")
+            lines.extend(self.gen_block(node.else_body))
+        lines.append(f"{self.pad}}}")
         return lines
     def gen_while(self, node):
-        cond = self._gen_expr(node.condition)
-        lines = [f"{self._pad}while ({cond}) {{"]
-        lines.extend(self._gen_block(node.body))
-        lines.append(f"{self._pad}}}")
+        cond = self.gen_expr(node.condition)
+        lines = [f"{self.pad}while ({cond}) {{"]
+        lines.extend(self.gen_block(node.body))
+        lines.append(f"{self.pad}}}")
         return lines
     def gen_block(self, stmts):
-        self._indent()
+        self.indent()
         lines = []
         for stmt in stmts:
-            lines.extend(self._gen_stmt(stmt))
-        self._dedent()
+            lines.extend(self.gen_stmt(stmt))
+        self.dedent()
         return lines
     def gen_expr(self, node):
         if isinstance(node, Number):
-            return self._gen_number(node)
+            return self.gen_number(node)
         if isinstance(node, String):
-            return self._gen_string(node)
+            return self.gen_string(node)
         if isinstance(node, Identifier):
             return node.name
         if isinstance(node, BinaryOp):
-            return self._gen_binary(node)
+            return self.gen_binary(node)
         if isinstance(node, FunctionCall):
-            return self._gen_call(node)
+            return self.gen_call(node)
         raise CodeGenError(f"Unknown expression node: {type(node).__name__}")
     def gen_number(self, node):
         v = node.value
@@ -140,8 +144,8 @@ class CodeGenerator:
         escaped = node.value.replace("\\", "\\\\").replace('"', '\\"')
         return f'"{escaped}"'
     def gen_binary(self, node):
-        left = self._gen_expr(node.left)
-        right = self._gen_expr(node.right)
+        left = self.gen_expr(node.left)
+        right = self.gen_expr(node.right)
         if node.op.name == "FLOOR_DIVIDE":
             return f"Math.floor({left} / {right})"
         js_op = _OP_MAP.get(node.op.name)
@@ -154,7 +158,7 @@ class CodeGenerator:
         return f"{left} {js_op} {right}"
     def gen_call(self, node):
         name = node.name
-        args = [self._gen_expr(a) for a in node.args]
+        args = [self.gen_expr(a) for a in node.args]
         if name == "length" and len(args) == 1:
             return f"{args[0]}.length"
         if name == "print":
