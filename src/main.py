@@ -2,6 +2,7 @@ from lexer import Lexer, LexerError, TokenType
 from parser import Parser, print_ast
 from semantic import SemanticAnalyzer, SemanticError
 from transformer import Transformer
+from codegen import CodeGenerator, CodeGenError
 
 
 def print_tokens(tokens):
@@ -25,12 +26,12 @@ if __name__ == "__main__":
 
     source_code = "\n".join(lines)
 
-    # ── STAGE 1 : LEXER ──────────────────────────────────────────────────────
+    # STAGE 1 : LEXER
     print("\n" + "═" * 45)
     print("  STAGE 1 — LEXER  (Token Stream)")
     print("═" * 45 + "\n")
     try:
-        lexer = Lexer(source_code)
+        lexer  = Lexer(source_code)
         tokens = lexer.tokenize()
         print_tokens(tokens)
     except LexerError as e:
@@ -39,19 +40,19 @@ if __name__ == "__main__":
             print(f"  Suggestion: {e.suggestion}")
         exit(1)
 
-    # ── STAGE 2 : PARSER ─────────────────────────────────────────────────────
+    # STAGE 2 : PARSER
     print("\n" + "═" * 45)
     print("  STAGE 2 — PARSER  (Abstract Syntax Tree)")
     print("═" * 45 + "\n")
     try:
         parser = Parser(tokens)
-        ast = parser.parse()
+        ast    = parser.parse()
         print_ast(ast)
     except Exception as e:
         print(f"Parser Error: {e}")
         exit(1)
 
-    # ── STAGE 3 : SEMANTIC ANALYSIS ──────────────────────────────────────────
+    # STAGE 3 : SEMANTIC ANALYSIS
     print("\n" + "═" * 45)
     print("  STAGE 3 — SEMANTIC ANALYSIS")
     print("═" * 45 + "\n")
@@ -64,16 +65,27 @@ if __name__ == "__main__":
         print(f"Semantic Error: {e}")
         exit(1)
 
-    # ── STAGE 4 : TRANSFORMER ────────────────────────────────────────────────
+    # STAGE 4 : TRANSFORMER
     print("\n" + "═" * 45)
     print("  STAGE 4 — TRANSFORMER  (Optimised AST)")
     print("═" * 45 + "\n")
     try:
-        transformer = Transformer()
+        transformer   = Transformer()
         optimised_ast = transformer.transform(ast)
         print_ast(optimised_ast)
     except Exception as e:
         print(f"Transformer Error: {e}")
+        exit(1)
+
+    # STAGE 5 : CODE GENERATION
+    print("\n" + "═" * 45)
+    print("  STAGE 5 — CODE GENERATION  (JavaScript)")
+    print("═" * 45 + "\n")
+    try:
+        js_code = CodeGenerator().generate(optimised_ast)
+        print(js_code)
+    except CodeGenError as e:
+        print(f"Code Generation Error: {e}")
         exit(1)
 
     print("\n" + "═" * 45)
