@@ -1,4 +1,5 @@
-from parser import Program, Assignment, Identifier, BinaryOp, Print, FunctionCall, If, While
+from parser import Parser,Program, Assignment, Identifier, BinaryOp, Print, FunctionCall, If, While
+from lexer import Lexer
 
 class SymbolTableGenerator:
 
@@ -45,3 +46,21 @@ def print_symbol_table(table):
     print("-" * 25)
     for name, typ in table.items():
         print(f"{name:<15} {typ}")
+def main():
+    print("Enter your program (press Enter twice to finish):")
+    lines = []
+    while True:
+        line = input()
+        if line == "":
+            break
+        lines.append(line)
+    source_code = "\n".join(lines)
+    lexer = Lexer(source_code)
+    tokens = lexer.tokenize()
+    parser = Parser(tokens)
+    ast = parser.parse()
+    generator = SymbolTableGenerator()
+    table = generator.generate(ast)
+    print_symbol_table(table)
+if __name__ == "__main__":
+    main()
