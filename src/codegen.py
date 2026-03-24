@@ -96,6 +96,14 @@ class CodeGenerator:
         return [f"{self.pad}{node.name} = {value};"]
     def gen_if(self, node):
         lines = []
+        # Pre-declare any variables assigned inside branches so they are
+        # accessible after the if/elif/else block (avoids JS block-scoping issue)
+        all_bodies = [node.body] + [b for _, b in node.elif_clauses] + ([node.else_body] if node.else_body else [])
+        for body in all_bodies:
+            for name in _collect_assigned(body):
+                if name not in self._declared:
+                    self._declared.add(name)
+                    lines.append(f"{self.pad}let {name};")
         cond = self.gen_expr(node.condition)
         lines.append(f"{self.pad}if ({cond}) {{")
         lines.extend(self.gen_block(node.body))
