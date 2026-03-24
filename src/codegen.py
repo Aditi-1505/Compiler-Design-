@@ -1,6 +1,6 @@
 from parser import (
     Program, Number, String, Identifier, BinaryOp,
-    Assignment, Print, If, While, FunctionCall,
+    Assignment, Print, If, While, For, FunctionCall,
 )
 
 _BUILTIN_MAP = {
@@ -81,6 +81,8 @@ class CodeGenerator:
             return self.gen_if(node)
         if isinstance(node, While):
             return self.gen_while(node)
+        if isinstance(node, For):
+            return self.gen_for(node)
         if isinstance(node, FunctionCall):
             return [f"{self.pad}{self.gen_expr(node)};"]
         if isinstance(node, BinaryOp):
@@ -109,6 +111,26 @@ class CodeGenerator:
     def gen_while(self, node):
         cond = self.gen_expr(node.condition)
         lines = [f"{self.pad}while ({cond}) {{"]
+        lines.extend(self.gen_block(node.body))
+        lines.append(f"{self.pad}}}")
+        return lines
+
+    def gen_for(self, node):
+        var   = node.var
+        start = self.gen_expr(node.start)
+        stop  = self.gen_expr(node.stop)
+        step  = self.gen_expr(node.step) if node.step else None
+
+        # Declare the loop variable if not yet declared
+        decl = "let " if var not in self._declared else ""
+        self._declared.add(var)
+
+        if step is None:
+            header = f"for ({decl}{var} = {start}; {var} < {stop}; {var}++)"
+        else:
+            header = f"for ({decl}{var} = {start}; {var} < {stop}; {var} += {step})"
+
+        lines = [f"{self.pad}{header} {{"]
         lines.extend(self.gen_block(node.body))
         lines.append(f"{self.pad}}}")
         return lines
