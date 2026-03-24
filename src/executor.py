@@ -11,21 +11,18 @@ from transformer import Transformer
 from codegen import CodeGenerator, CodeGenError
 
 
-# ── Unsupported feature patterns ────────────────────────
 UNSUPPORTED_FEATURES = {
-
-    r'\bdef\b':    "function definition",
+    r'\bdef\b': "function definition",
     r'\breturn\b': "return statement",
     r'\bimport\b': "import statement",
-    r'\bclass\b':  "class definition",
+    r'\bclass\b': "class definition",
     r'\blambda\b': "lambda expression",
-    r'\btry\b':    "try/except block",
+    r'\btry\b': "try/except block",
     r'\bexcept\b': "try/except block",
 }
 
 
 def check_unsupported(source_code):
-    """Return a list of unsupported feature names found in the source."""
     found = []
     for pattern, name in UNSUPPORTED_FEATURES.items():
         if re.search(pattern, source_code) and name not in found:
@@ -34,7 +31,6 @@ def check_unsupported(source_code):
 
 
 def get_js_code(source_code):
-    """Run the transpiler pipeline and return the generated JS code."""
     tokens = Lexer(source_code).tokenize()
     ast = Parser(tokens).parse()
     SemanticAnalyzer().analyze(ast)
@@ -42,31 +38,45 @@ def get_js_code(source_code):
     return CodeGenerator().generate(optimized_ast)
 
 
-def count_inputs(source_code):
-    """Count how many input() calls exist in the source."""
-    return len(re.findall(r'\binput\s*\(', source_code))
+def extract_input_prompts(source_code):
+    """
+    Extract prompt messages from input() calls in order.
+    Supports:
+      input("Enter your name")
+      input('Enter limit: ')
+      input()   -> falls back to "Input N"
+    """
+    prompts = []
+    # Match input(...) capturing everything inside the parens
+    for match in re.finditer(r'\binput\s*\(([^)]*)\)', source_code):
+        inner = match.group(1).strip()
+        # Try to extract a string literal (single or double quoted)
+        str_match = re.match(r'^["\'](.+?)["\']$', inner)
+        if str_match:
+            prompts.append(str_match.group(1).rstrip(": ").strip())
+        else:
+            prompts.append(None)   # No prompt string, will use fallback
+    return prompts
 
 
 def collect_user_inputs(source_code):
-    """
-    If the code uses input(), ask the user to provide values upfront.
-    Returns a list of strings (one per input() call).
-    """
-    n = count_inputs(source_code)
-    if n == 0:
+    prompts = extract_input_prompts(source_code)
+    if not prompts:
         return []
 
-    print(f"\n[ This program requires {n} input value(s) ]")
+    print(f"\n[ This program requires {len(prompts)} input value(s) ]")
     print("-" * 30)
+
     values = []
-    for i in range(1, n + 1):
-        val = input(f"  Input {i}: ")
+    for i, prompt in enumerate(prompts, 1):
+        label = prompt if prompt else f"Input {i}"
+        val = input(f"  {label}: ")
         values.append(val)
+
     return values
 
 
 def run_python(source_code, user_inputs):
-    """Run Python source as a subprocess, feeding user_inputs via stdin."""
     stdin_data = "\n".join(user_inputs) + ("\n" if user_inputs else "")
     try:
         result = subprocess.run(
@@ -85,11 +95,8 @@ def run_python(source_code, user_inputs):
 
 
 def run_js(js_code, user_inputs):
-    """
-    Run generated JS in Node.js.
-    Injects a prompt() shim so Node doesn't crash on input() calls.
-    """
     inputs_js = "[" + ", ".join(f'"{v}"' for v in user_inputs) + "]"
+
     shim = (
         f"const _inputs = {inputs_js};\n"
         f"let _inputIndex = 0;\n"
@@ -98,9 +105,10 @@ def run_js(js_code, user_inputs):
         f"  return _inputs[_inputIndex++] || '';\n"
         f"}}\n\n"
     )
-    full_js = shim + js_code
 
+    full_js = shim + js_code
     tmp_path = None
+
     try:
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".js", delete=False, encoding="utf-8"
@@ -114,12 +122,14 @@ def run_js(js_code, user_inputs):
             text=True,
             timeout=10
         )
+
         if result.returncode != 0:
             err = result.stderr.strip().splitlines()
             for line in err:
                 if "Error" in line:
                     return f"[JS Runtime Error] {line.strip()}"
             return f"[JS Runtime Error] {err[-1]}"
+
         return result.stdout.rstrip("\n")
 
     except FileNotFoundError:
@@ -136,22 +146,19 @@ def run_executor(source_code):
     print("         OUTPUT COMPARISON")
     print("=" * 50)
 
-    # ── Check for unsupported features ──────────────────
     unsupported = check_unsupported(source_code)
     if unsupported:
         print("\n[ UNSUPPORTED FEATURE DETECTED ]")
         print("-" * 30)
         for feature in unsupported:
             print(f"  \u2718  '{feature}' is not supported by this transpiler.")
-        print("\n  Cannot execute \u2014 please rewrite using supported constructs:")
+        print("\n  Cannot execute — please rewrite using supported constructs:")
         print("  \u2714  for loops, while loops, if/elif/else, assignments, print, built-in functions")
         print("=" * 50)
         return
 
-    # ── Collect inputs once, reuse for both runs ────────
     user_inputs = collect_user_inputs(source_code)
 
-    # ── Transpile ───────────────────────────────────────
     try:
         js_code = get_js_code(source_code)
     except (LexerError, SemanticError, CodeGenError) as e:
@@ -161,24 +168,21 @@ def run_executor(source_code):
         print(f"\nUnexpected Transpiler Error: {e}")
         return
 
-    # ── Python output ───────────────────────────────────
     print("\n[ PYTHON OUTPUT ]")
     print("-" * 30)
     py_output = run_python(source_code, user_inputs)
     print(py_output if py_output else "(no output)")
 
-    # ── JavaScript output ───────────────────────────────
     print("\n[ JAVASCRIPT OUTPUT ]")
     print("-" * 30)
     js_output = run_js(js_code, user_inputs)
     print(js_output if js_output else "(no output)")
 
-    # ── Match check ─────────────────────────────────────
     print("\n" + "=" * 50)
     if py_output == js_output:
-        print("\u2714  Both outputs MATCH \u2014 transpilation is correct!")
+        print("\u2714  Both outputs MATCH — transpilation is correct!")
     else:
-        print("\u2718  Outputs DO NOT match \u2014 check transpilation logic.")
+        print("\u2718  Outputs DO NOT match — check transpilation logic.")
         print(f"   Python : {repr(py_output)}")
         print(f"   JS     : {repr(js_output)}")
     print("=" * 50)
@@ -186,6 +190,7 @@ def run_executor(source_code):
 
 if __name__ == "__main__":
     print("\nEnter Python code (press Enter twice to finish):\n")
+
     lines = []
     while True:
         line = input()
