@@ -1,27 +1,30 @@
 from transpiler import run_transpiler
+from executor import run_executor
 from lexer import LexerError
 from semantic import SemanticError
 from codegen import CodeGenError
 
 if __name__ == "__main__":
     print("\nEnter Python code (press Enter twice to finish):\n")
-    lines=[]
+    lines = []
     while True:
-        line=input()
-        if line=="":
+        line = input()
+        if line == "":
             break
         lines.append(line)
-    source_code ="\n".join(lines)
+    source_code = "\n".join(lines)
+
     try:
         run_transpiler(source_code)
+        run_executor(source_code)
     except LexerError as e:
-        print(f"\nLexer Error at line{e.line},column{e.column}")
+        print(f"\nLexer Error at line {e.line}, column {e.column}")
         print(e.message)
         if e.suggestion:
-            print("Suggestion:",e.suggestion)
+            print("Suggestion:", e.suggestion)
     except SemanticError as e:
-        print("Semantic Error:",e)
+        print("Semantic Error:", e)
     except CodeGenError as e:
-        print("Code Generation Error:",e)
+        print("Code Generation Error:", e)
     except Exception as e:
-        print("Unexpected Error:",e)
+        print("Unexpected Error:", e)
