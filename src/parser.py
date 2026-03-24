@@ -271,8 +271,22 @@ def print_ast(node, indent=0):
         print(space + f"BinaryOp({node.op.name})")
         print_ast(node.left, indent + 1)
         print_ast(node.right, indent + 1)
+    elif isinstance(node, If):
+        print(space + "If")
+        print_ast(node.condition, indent + 1)
+        for stmt in node.body:
+            print_ast(stmt, indent + 1)
+        for cond, body in node.elif_clauses:
+            print(space + "  Elif")
+            print_ast(cond, indent + 1)
+            for stmt in body:
+                print_ast(stmt, indent + 1)
+        if node.else_body:
+            print(space + "  Else")
+            for stmt in node.else_body:
+                print_ast(stmt, indent + 1)
     elif isinstance(node, While):
-        print(space + f"While")
+        print(space + "While")
         print_ast(node.condition, indent + 1)
         for stmt in node.body:
             print_ast(stmt, indent + 1)
