@@ -46,6 +46,14 @@ class While(ASTNode):
         self.condition = condition
         self.body = body
 
+class For(ASTNode):
+    def __init__(self, var, start, stop, step, body):
+        self.var = var      # loop variable name (string)
+        self.start = start  # ASTNode expression
+        self.stop = stop    # ASTNode expression
+        self.step = step    # ASTNode expression or None
+        self.body = body    # list of statements
+
 class FunctionCall(ASTNode):
     def __init__(self, name, args):
         self.name = name
@@ -102,6 +110,8 @@ class Parser:
             return self.if_statement()
         if self.current.type == TokenType.WHILE:
             return self.while_statement()
+        if self.current.type == TokenType.FOR:
+            return self.for_statement()
         if self.current.type == TokenType.IDENTIFIER:
             next_pos = self.position + 1
             if next_pos < len(self.tokens) and \
@@ -150,6 +160,32 @@ class Parser:
         self.eat(TokenType.COLON)
         body = self._parse_block()
         return While(condition, body)
+    def for_statement(self):
+        self.eat(TokenType.FOR)
+        var = self.current.value
+        self.eat(TokenType.IDENTIFIER)
+        self.eat(TokenType.IN)
+        # only range(...) is supported
+        if self.current.type != TokenType.IDENTIFIER or self.current.value != "range":
+            raise Exception("For loop only supports 'range(...)' as iterable")
+        self.eat(TokenType.IDENTIFIER)  # eat 'range'
+        self.eat(TokenType.LPAREN)
+        args = [self.expression()]
+        while self.current.type == TokenType.COMMA:
+            self.eat(TokenType.COMMA)
+            args.append(self.expression())
+        self.eat(TokenType.RPAREN)
+        if len(args) == 1:
+            start, stop, step = Number("0"), args[0], None
+        elif len(args) == 2:
+            start, stop, step = args[0], args[1], None
+        elif len(args) == 3:
+            start, stop, step = args[0], args[1], args[2]
+        else:
+            raise Exception("range() takes 1 to 3 arguments")
+        self.eat(TokenType.COLON)
+        body = self._parse_block()
+        return For(var, start, stop, step, body)
     def _parse_block(self):
         self.eat(TokenType.NEWLINE)
         self.eat(TokenType.INDENT)
@@ -235,6 +271,20 @@ def print_ast(node, indent=0):
         print(space + f"BinaryOp({node.op.name})")
         print_ast(node.left, indent + 1)
         print_ast(node.right, indent + 1)
+    elif isinstance(node, While):
+        print(space + f"While")
+        print_ast(node.condition, indent + 1)
+        for stmt in node.body:
+            print_ast(stmt, indent + 1)
+    elif isinstance(node, For):
+        step_str = f", step={node.step.value}" if node.step else ""
+        print(space + f"For({node.var}, start, stop{step_str})")
+        print_ast(node.start, indent + 1)
+        print_ast(node.stop, indent + 1)
+        if node.step:
+            print_ast(node.step, indent + 1)
+        for stmt in node.body:
+            print_ast(stmt, indent + 1)
     elif isinstance(node, FunctionCall):
         print(space + f"FunctionCall({node.name})")
         for arg in node.args:
