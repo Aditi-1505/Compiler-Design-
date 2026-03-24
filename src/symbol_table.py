@@ -1,4 +1,4 @@
-from parser import Parser,Program, Assignment, Identifier, BinaryOp, Print, FunctionCall, If, While
+from parser import Parser, Program, Assignment, Identifier, BinaryOp, Print, FunctionCall, If, While, For
 from lexer import Lexer
 
 class SymbolTableGenerator:
@@ -37,6 +37,14 @@ class SymbolTableGenerator:
                 self.generate(stmt)
         elif isinstance(node, While):
             self.generate(node.condition)
+            for stmt in node.body:
+                self.generate(stmt)
+        elif isinstance(node, For):
+            self.symbol_table[node.var] = "variable"
+            self.generate(node.start)
+            self.generate(node.stop)
+            if node.step:
+                self.generate(node.step)
             for stmt in node.body:
                 self.generate(stmt)
         return self.symbol_table
