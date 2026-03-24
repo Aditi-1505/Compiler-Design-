@@ -1,6 +1,6 @@
 from parser import (
     Program, Number, String, Identifier, BinaryOp,
-    Assignment, Print, If, While, FunctionCall
+    Assignment, Print, If, While, For, FunctionCall
 )
 from lexer import Lexer
 from parser import Parser
@@ -68,6 +68,14 @@ class SemanticAnalyzer:
                 self.analyze(stmt)
         elif isinstance(node, While):
             self.analyze(node.condition)
+            for stmt in node.body:
+                self.analyze(stmt)
+        elif isinstance(node, For):
+            self.analyze(node.start)
+            self.analyze(node.stop)
+            if node.step:
+                self.analyze(node.step)
+            self.symbol_table[node.var] = "number"
             for stmt in node.body:
                 self.analyze(stmt)
         elif isinstance(node, (Number, String)):
