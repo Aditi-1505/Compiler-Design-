@@ -2,7 +2,7 @@ from lexer import Lexer
 from parser import Parser, print_ast
 from parser import (
     Program, Number, String, Identifier,
-    BinaryOp, Assignment, Print, If, While, FunctionCall
+    BinaryOp, Assignment, Print, If, While, For, FunctionCall
 )
 from semantic import SemanticAnalyzer
 
@@ -22,6 +22,8 @@ class Transformer:
             return self.transform_if(node)
         elif isinstance(node, While):
             return self.transform_while(node)
+        elif isinstance(node, For):
+            return self.transform_for(node)
         elif isinstance(node, (Number, String, Identifier)):
             return node
         return node
@@ -78,6 +80,13 @@ class Transformer:
             return None
         body = [s for s in (self.transform(st) for st in node.body) if s]
         return While(condition, body)
+
+    def transform_for(self, node):
+        start = self.transform(node.start)
+        stop  = self.transform(node.stop)
+        step  = self.transform(node.step) if node.step else None
+        body  = [s for s in (self.transform(st) for st in node.body) if s]
+        return For(node.var, start, stop, step, body)
 
 if __name__ == "__main__":
     print("Enter Python code (press Enter twice to finish):\n")
