@@ -178,8 +178,13 @@ def run_executor(source_code):
     js_output = run_js(js_code, user_inputs)
     print(js_output if js_output else "(no output)")
 
+    # Normalize Python float outputs like "35.0" -> "35" to match JS integer display
+    def normalize(text):
+        import re
+        return re.sub(r'\b(\d+)\.0\b', r'\1', text)
+
     print("\n" + "=" * 50)
-    if py_output == js_output:
+    if normalize(py_output) == normalize(js_output):
         print("\u2714  Both outputs MATCH — transpilation is correct!")
     else:
         print("\u2718  Outputs DO NOT match — check transpilation logic.")
