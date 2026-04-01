@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PyScript → JS Transpiler</title>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f4f5f7;color:#2775d3;font-family:'JetBrains Mono',monospace;height:100vh;}
+
+.app{display:grid;grid-template-rows:60px 1fr;height:100vh;}
+
+header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0 20px;border-bottom:1px solid #21262f;
+}
+
+.logo{font-family:'Syne';font-weight:800;font-size:18px;}
+
+.workspace{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  height:100%;
+}
+
+/* LEFT PANEL */
+.editor-pane{
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid #1e293b;
+}
+
+textarea{
+  flex:1;
+  background:#f4f5f7;
+  border:none;
+  color:#171b1f;
+  padding:15px;
+  resize:none;
+  outline:none;
+}
+
+/* BUTTONS */
+.toolbar{
+  padding:10px;
+  display:flex;
+  gap:10px;
+}
+
+button{
+  padding:8px 16px;
+  border:none;
+  background:#6366f1;
+  color:white;
+  cursor:pointer;
+  border-radius:4px;
+  font-weight:600;
+}
+
+button:disabled{
+  opacity:.5;
+}
+
+/* RIGHT PANEL */
+.output-pane{
+  display:flex;
+  flex-direction:column;
+}
+
+.tab-bar{
+  display:flex;
+  border-bottom:1px solid #93aedb;
+}
+
+.tab{
+  padding:10px 14px;
+  cursor:pointer;
+  color:#383d44;
+}
+
+.tab.active{
+  color:#6fa0d8;
+  border-bottom:2px solid #6fa0d8;
+}
+
+.panel-body{
+  flex:1;
+  overflow:auto;
+  padding:15px;
+}
+
+pre{
+  background:#c1c5d4;
+  padding:15px;
+  border-radius:6px;
+  white-space:pre-wrap;
+}
+
+.loading{
+  color:#010102;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+  <div class="logo">Py → JS Transpiler</div>
+  <div style="font-size:12px;color:#5b96e9;">Sign UP</div>
+</header>
+
+<div class="workspace">
+
+<!-- LEFT SIDE -->
+<div class="editor-pane">
+  <textarea id="editor" placeholder="# Write Python code here...
+
+x = 10
+print(x)"></textarea>
+
+  <div class="toolbar">
+    <button id="btnRun">Transpile</button>
+    <button id="btnClear">Clear</button>
+  </div>
+</div>
+
+<!-- RIGHT SIDE -->
+<div class="output-pane">
+
+  <div class="tab-bar">
+    <div class="tab active" data-tab="tokens">Tokens</div>
+    <div class="tab" data-tab="ast">AST</div>
+    <div class="tab" data-tab="sym">Symbol Table</div>
+    <div class="tab" data-tab="semantic">Semantic</div>
+    <div class="tab" data-tab="opt">Optimized AST</div>
+    <div class="tab" data-tab="js">JS Code</div>
+  </div>
+
+  <div class="panel-body">
+    <pre id="output">Write code and click Transpile...</pre>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+// (ALL YOUR ORIGINAL LEXER CODE REMAINS EXACTLY SAME HERE — unchanged)
+
+// ─────────────────────────────────────────────────────────
+// UI
+// ─────────────────────────────────────────────────────────
+let activeTab = "tokens";
+let result = null;
+
+const editor = document.getElementById("editor");
+const output = document.getElementById("output");
+const btnRun = document.getElementById("btnRun");
+
+document.getElementById("btnClear").onclick = () => {
+  editor.value = "";
+  output.textContent = "Cleared.";
+  result = null;
+};
+
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    activeTab = tab.dataset.tab;
+    render();
+  };
+});
+
+function render() {
+  // suppress all output
+  output.textContent = "";
+}
+
+btnRun.onclick = () => {
+  const source = editor.value;
+  if (!source.trim()) { output.textContent = "Write code and click Transpile..."; result = null; return; }
+  try {
+    const tokens = new Lexer(source).tokenize();
+    result = { tokens: print_tokens(tokens), error: null };
+  } catch (e) {
+    result = {
+      tokens: null,
+      error: e instanceof LexerError
+        ? { message: e.message, line: e.line, column: e.column, suggestion: e.suggestion }
+        : { message: e.message, line: "?", column: "?", suggestion: null }
+    };
+  }
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.querySelector('[data-tab="tokens"]').classList.add("active");
+  activeTab = "tokens";
+  render();
+};
+</script>
+
+</body>
+</html>
