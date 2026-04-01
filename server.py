@@ -23,7 +23,7 @@ CORS(app)
 # ── Serve index2.html from web/ folder ──
 @app.route('/')
 def index():
-    return send_from_directory(os.path.join(os.path.dirname(__file__), 'web'), 'index2.html')
+    return send_from_directory(os.path.join(os.path.dirname(__file__), 'web'), 'index.html')
 
 @app.route('/transpile', methods=['POST'])
 def transpile():
