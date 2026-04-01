@@ -1,9 +1,29 @@
 from transpiler import run_transpiler
 from executor import run_executor
-from lexer import LexerError
-from semantic import SemanticError
+from lexer import LexerError, Lexer
+from semantic import SemanticError, SemanticAnalyzer
 from codegen import CodeGenError
+from parser import Parser
+from transformer import Transformer
 
+def launch_visualizer(source_code):
+    try:
+        import tkinter as tk
+        from visualize import ASTVisualizerApp, draw_tree
+    except ImportError as e:
+        print(f"\n[Visualizer] Could not import required module: {e}")
+        return
+    tokens = Lexer(source_code).tokenize()
+    ast    = Parser(tokens).parse()
+    SemanticAnalyzer().analyze(ast)
+    tokens2   = Lexer(source_code).tokenize()
+    ast2      = Parser(tokens2).parse()
+    opt_ast   = Transformer().transform(ast2)
+    app = ASTVisualizerApp()
+    app.editor.delete("1.0", "end")
+    app.editor.insert("1.0", source_code)
+    draw_tree(app.canvas, opt_ast)
+    app.mainloop()
 if __name__ == "__main__":
     print("\nEnter Python code (press Enter twice to finish):\n")
     lines = []
@@ -28,3 +48,5 @@ if __name__ == "__main__":
         print("Code Generation Error:", e)
     except Exception as e:
         print("Unexpected Error:", e)
+    finally:
+        launch_visualizer(source_code)
